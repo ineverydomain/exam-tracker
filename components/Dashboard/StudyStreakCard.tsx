@@ -27,7 +27,7 @@ export const StudyStreakCard: React.FC<StudyStreakCardProps> = ({ streak }) => {
         {streak >= 30 && 'Incredible dedication! 🔥'}
       </p>
       <p className="text-xs text-gray-600 mt-3 italic">
-        Click to mark today's study
+        Click to mark today&apos;s study
       </p>
     </div>
   );

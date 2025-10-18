@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { UserData, Paper, CustomSubject, Module } from '@/types';
+import { UserData, Paper, CustomSubject } from '@/types';
 import { getPapers } from '@/data/syllabus';
 import { CountdownCard } from './CountdownCard';
 import { ProgressCard } from './ProgressCard';

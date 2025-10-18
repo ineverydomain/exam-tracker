@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { UserData, Course } from '@/types';
+import { UserData } from '@/types';
 
 interface SettingsPanelProps {
   userData: UserData;
