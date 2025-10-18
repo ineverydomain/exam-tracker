@@ -27,8 +27,8 @@ export const SignupForm: React.FC<{ onToggleForm: () => void }> = ({ onToggleFor
 
     try {
       await signUp(email, password);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create account');
     } finally {
       setLoading(false);
     }

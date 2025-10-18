@@ -90,7 +90,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case 1:
         return displayName.trim() !== '';
       case 2:
-        return course !== '';
+        return true; // Course is always valid (initialized with 'CS')
       case 3:
         return level !== '';
       case 4:

@@ -17,8 +17,8 @@ export const LoginForm: React.FC<{ onToggleForm: () => void }> = ({ onToggleForm
 
     try {
       await signIn(email, password);
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sign in');
     } finally {
       setLoading(false);
     }
@@ -30,8 +30,8 @@ export const LoginForm: React.FC<{ onToggleForm: () => void }> = ({ onToggleForm
 
     try {
       await signInWithGoogle();
-    } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sign in with Google');
     } finally {
       setLoading(false);
     }
@@ -119,7 +119,7 @@ export const LoginForm: React.FC<{ onToggleForm: () => void }> = ({ onToggleForm
       </div>
 
       <p className="mt-6 text-center text-sm text-gray-600">
-        Don't have an account?{' '}
+        Don&apos;t have an account?{' '}
         <button onClick={onToggleForm} className="text-blue-600 hover:underline font-medium">
           Sign Up
         </button>
