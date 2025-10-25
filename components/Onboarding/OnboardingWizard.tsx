@@ -11,21 +11,15 @@ interface OnboardingWizardProps {
   onComplete: () => void;
 }
 
-const courseOptions: Course[] = ['CS', 'CA', 'CMA'];
+const courseOptions: Course[] = ['CS', 'CA', 'CMA', 'Other'];
 
 const levelOptions: Record<Course, string[]> = {
   CS: ['Executive', 'Professional'],
   CA: ['Foundation', 'Intermediate', 'Final'],
   CMA: ['Foundation', 'Intermediate', 'Final'],
+  Other: ['Not Applicable'], // For custom courses
 };
 
-const examOptions = [
-  'Dec 2025',
-  'June 2026',
-  'Dec 2026',
-  'June 2027',
-  'Dec 2027',
-];
 
 const groupOptions = ['Group 1', 'Group 2', 'Both Groups'];
 
@@ -38,9 +32,49 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [course, setCourse] = useState<Course>('CS');
   const [level, setLevel] = useState('');
   const [targetExam, setTargetExam] = useState('');
+  const [dateError, setDateError] = useState('');
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const validateDate = (dateString: string): boolean => {
+    setDateError('');
+    
+    if (!dateString) {
+      setDateError('Exam date cannot be empty.');
+      return false;
+    }
+
+    // Check format DD-MM-YYYY
+    const dateRegex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(\d{4})$/;
+    if (!dateRegex.test(dateString)) {
+      setDateError('Please enter a valid date in DD-MM-YYYY format.');
+      return false;
+    }
+
+    // Parse and validate the actual date
+    const [day, month, year] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    
+    if (
+      date.getDate() !== day ||
+      date.getMonth() !== month - 1 ||
+      date.getFullYear() !== year
+    ) {
+      setDateError('Please enter a valid exam date.');
+      return false;
+    }
+
+    // Check if date is in the future
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date < today) {
+      setDateError('Exam date must be in the future.');
+      return false;
+    }
+
+    return true;
+  };
 
   const handleGroupToggle = (group: string) => {
     if (group === 'Both Groups') {
@@ -90,12 +124,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       case 1:
         return displayName.trim() !== '';
       case 2:
-        return true; // Course is always valid (initialized with 'CS')
+        return true; // Course is always valid
       case 3:
         return level !== '';
       case 4:
-        return targetExam !== '';
+        return targetExam !== '' && !dateError && validateDate(targetExam);
       case 5:
+        // For Other course, groups are not required
+        if (course === 'Other') {
+          return true;
+        }
         return selectedGroups.length > 0;
       default:
         return false;
@@ -135,14 +173,19 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {/* Step 2: Course Selection */}
         {step === 2 && (
           <div className="space-y-6">
-            <h3 className="text-2xl font-semibold text-gray-800">Select Your Course</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <h3 className="text-2xl font-semibold text-gray-900">Select Your Course</h3>
+            <div className="grid grid-cols-2 gap-4">
               {courseOptions.map((c) => (
                 <button
                   key={c}
                   onClick={() => {
                     setCourse(c);
                     setLevel('');
+                    // If Other is selected, auto-set level and skip to exam selection
+                    if (c === 'Other') {
+                      setLevel('Not Applicable');
+                      setSelectedGroups([]); // No groups for Other
+                    }
                   }}
                   className={`p-6 rounded-lg border-2 transition-all ${
                     course === c
@@ -151,10 +194,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   }`}
                 >
                   <div className="text-3xl font-bold">{c}</div>
-                  <div className="text-sm mt-2">
+                  <div className="text-sm mt-2 text-gray-700">
                     {c === 'CS' && 'Company Secretary'}
                     {c === 'CA' && 'Chartered Accountancy'}
                     {c === 'CMA' && 'Cost & Management'}
+                    {c === 'Other' && 'Custom Course'}
                   </div>
                 </button>
               ))}
@@ -184,24 +228,31 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           </div>
         )}
 
-        {/* Step 4: Target Exam */}
+        {/* Step 4: Target Exam Date */}
         {step === 4 && (
           <div className="space-y-6">
-            <h3 className="text-2xl font-semibold text-gray-800">Select Target Exam</h3>
-            <div className="grid grid-cols-2 gap-4">
-              {examOptions.map((exam) => (
-                <button
-                  key={exam}
-                  onClick={() => setTargetExam(exam)}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    targetExam === exam
-                      ? 'border-blue-600 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 hover:border-blue-300'
-                  }`}
-                >
-                  <div className="text-lg font-semibold">{exam}</div>
-                </button>
-              ))}
+            <h3 className="text-2xl font-semibold text-gray-800">Enter Target Exam Date</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Exam Date (DD-MM-YYYY)
+              </label>
+              <input
+                type="text"
+                value={targetExam}
+                onChange={(e) => {
+                  setTargetExam(e.target.value);
+                  setDateError('');
+                }}
+                onBlur={() => targetExam && validateDate(targetExam)}
+                placeholder="25-12-2025"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+              />
+              {dateError && (
+                <p className="mt-2 text-sm text-red-600">{dateError}</p>
+              )}
+              <p className="mt-2 text-sm text-gray-600">
+                Enter your exam date in the format: Day-Month-Year (e.g., 15-06-2026)
+              </p>
             </div>
           </div>
         )}
@@ -242,16 +293,38 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {/* Navigation Buttons */}
         <div className="mt-8 flex justify-between">
           <button
-            onClick={() => setStep(step - 1)}
+            onClick={() => {
+              // Handle back button - skip steps for Other course
+              if (course === 'Other') {
+                if (step === 4) {
+                  setStep(2); // Skip level selection, go back to course
+                } else {
+                  setStep(step - 1);
+                }
+              } else {
+                setStep(step - 1);
+              }
+            }}
             disabled={step === 1}
-            className="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-900"
           >
             Back
           </button>
 
-          {step < 5 ? (
+          {((course === 'Other' && step < 4) || (course !== 'Other' && step < 5)) ? (
             <button
-              onClick={() => setStep(step + 1)}
+              onClick={() => {
+                // Handle next button - skip steps for Other course
+                if (course === 'Other') {
+                  if (step === 2) {
+                    setStep(4); // Skip level and group, go to exam
+                  } else {
+                    setStep(step + 1);
+                  }
+                } else {
+                  setStep(step + 1);
+                }
+              }}
               disabled={!isStepValid()}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >

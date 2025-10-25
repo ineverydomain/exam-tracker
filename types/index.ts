@@ -1,4 +1,4 @@
-export type Course = 'CS' | 'CA' | 'CMA';
+export type Course = 'CS' | 'CA' | 'CMA' | 'Other';
 
 export type Level = {
   CS: 'Executive' | 'Professional';
@@ -39,14 +39,16 @@ export interface UserData {
   displayName: string;
   course: Course;
   level: string;
-  targetExam: string;
+  targetExam: string; // Now stored as DD-MM-YYYY format
   groups: string[];
   progress: Record<string, string[]>; // paperId -> completed chapterIds
   customSubjects: CustomSubject[]; // User-defined subjects
   studyStreak: {
     current: number;
-    lastCheckedDate: string; // Changed from lastMarkedDate for honesty-based tracking
+    lastCheckedDate: string; // YYYY-MM-DD format
   };
+  streakCount: number; // Alias for backward compatibility
+  lastCheckInDate: string; // Alias for backward compatibility
   createdAt: string;
 }
 

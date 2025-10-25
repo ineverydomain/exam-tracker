@@ -9,8 +9,10 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
+  sendEmailVerification,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { FirebaseError } from 'firebase/app';
 
 interface AuthContextType {
   user: User | null;
@@ -45,11 +47,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    
+    // Check if email is verified
+    if (!userCredential.user.emailVerified) {
+      await signOut(auth);
+      throw new Error('Please verify your email before logging in. Check your inbox for the verification link.');
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Send verification email
+    try {
+      await sendEmailVerification(userCredential.user);
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      // Don't throw here - account is created, just log the error
+    }
+    
+    // Sign out immediately so they can't access the dashboard
+    await signOut(auth);
   };
 
   const signInWithGoogle = async () => {

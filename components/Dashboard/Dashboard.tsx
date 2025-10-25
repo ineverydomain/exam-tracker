@@ -16,6 +16,7 @@ import { MilestonesSection } from './MilestonesSection';
 import { SettingsPanel } from './SettingsPanel';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus } from 'lucide-react';
+import { Toast } from '../Toast';
 
 export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -25,20 +26,34 @@ export const Dashboard: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [showStudyCheck, setShowStudyCheck] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Check if user needs to do daily study check
+  // Check if streak should be reset due to missed days (only runs once on load)
   useEffect(() => {
     if (!user || !userData) return;
 
-    const today = new Date().toISOString().split('T')[0];
-    const lastChecked = userData.studyStreak.lastCheckedDate 
-      ? userData.studyStreak.lastCheckedDate.split('T')[0] 
-      : '';
+    const checkAndResetStreak = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const lastChecked = userData.studyStreak.lastCheckedDate 
+        ? userData.studyStreak.lastCheckedDate.split('T')[0] 
+        : '';
 
-    // Show popup if user hasn't checked today
-    if (lastChecked !== today) {
-      setShowStudyCheck(true);
-    }
+      // If there's a last check date and streak is not 0
+      if (lastChecked && userData.studyStreak.current > 0) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        // If last check was NOT yesterday or today, reset streak
+        if (lastChecked !== yesterdayStr && lastChecked !== today) {
+          await updateDoc(doc(db, 'users', user.uid), {
+            'studyStreak.current': 0,
+          });
+        }
+      }
+    };
+
+    checkAndResetStreak();
   }, [user, userData]);
 
   useEffect(() => {
@@ -138,6 +153,29 @@ export const Dashboard: React.FC = () => {
     });
   };
 
+  // Handle renaming a module
+  const handleModuleRename = async (subjectId: string, moduleId: string, newName: string) => {
+    if (!user || !userData) return;
+
+    const updatedSubjects = userData.customSubjects.map((subject) => {
+      if (subject.id === subjectId) {
+        return {
+          ...subject,
+          modules: subject.modules.map((module) =>
+            module.id === moduleId
+              ? { ...module, name: newName }
+              : module
+          ),
+        };
+      }
+      return subject;
+    });
+
+    await updateDoc(doc(db, 'users', user.uid), {
+      customSubjects: updatedSubjects,
+    });
+  };
+
   // Handle daily study check - YES
   const handleStudyCheckYes = async () => {
     if (!user || !userData) return;
@@ -146,22 +184,34 @@ export const Dashboard: React.FC = () => {
     const lastChecked = userData.studyStreak.lastCheckedDate 
       ? userData.studyStreak.lastCheckedDate.split('T')[0]
       : '';
-    let newStreak = userData.studyStreak.current;
 
-    if (lastChecked !== today) {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-      if (lastChecked === yesterdayStr) {
-        newStreak += 1;
-      } else if (lastChecked === '') {
-        newStreak = 1;
-      } else {
-        newStreak = 1; // Reset if more than 1 day gap
-      }
+    // Check if already logged today
+    if (lastChecked === today) {
+      setToast({ message: "Today's streak already recorded.", type: 'info' });
+      setShowStudyCheck(false);
+      return;
     }
 
+    let newStreak = userData.studyStreak.current;
+
+    // Calculate yesterday's date
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    // Determine new streak value
+    if (lastChecked === yesterdayStr) {
+      // Checked in yesterday - increment streak
+      newStreak += 1;
+    } else if (lastChecked === '' || lastChecked === null) {
+      // First time checking in - start at 1
+      newStreak = 1;
+    } else {
+      // More than 1 day gap - reset to 1
+      newStreak = 1;
+    }
+
+    // Update in database
     await updateDoc(doc(db, 'users', user.uid), {
       'studyStreak.current': newStreak,
       'studyStreak.lastCheckedDate': new Date().toISOString(),
@@ -174,7 +224,7 @@ export const Dashboard: React.FC = () => {
   const handleStudyCheckNo = async () => {
     if (!user) return;
 
-    // Reset streak to 0
+    // Reset streak to 0 and update last checked date
     await updateDoc(doc(db, 'users', user.uid), {
       'studyStreak.current': 0,
       'studyStreak.lastCheckedDate': new Date().toISOString(),
@@ -254,7 +304,15 @@ export const Dashboard: React.FC = () => {
   const overallProgress = calculateOverallProgress();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
@@ -341,60 +399,87 @@ export const Dashboard: React.FC = () => {
                   subject={subject}
                   onModuleToggle={handleModuleToggle}
                   onDelete={handleDeleteSubject}
+                  onModuleRename={handleModuleRename}
                 />
               ))}
             </div>
           </>
         )}
 
-        {/* Papers Section */}
-        <div className="mb-6 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {userData.customSubjects && userData.customSubjects.length > 0 ? 'Course Papers' : 'Your Papers'}
-          </h2>
-          <div className="flex gap-3">
-            {(!userData.customSubjects || userData.customSubjects.length === 0) && (
-              <button
-                onClick={() => setShowAddSubject(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                Add Custom Subject
-              </button>
-            )}
-            <button
-              onClick={handleResetProgress}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-            >
-              Reset All Progress
-            </button>
-          </div>
-        </div>
+        {/* Papers Section - Hide for Other course if no papers */}
+        {(userData.course !== 'Other' || papers.length > 0) && (
+          <>
+            <div className="mb-6 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {userData.customSubjects && userData.customSubjects.length > 0 ? 'Course Papers' : 'Your Papers'}
+              </h2>
+              <div className="flex gap-3">
+                {(!userData.customSubjects || userData.customSubjects.length === 0) && (
+                  <button
+                    onClick={() => setShowAddSubject(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Custom Subject
+                  </button>
+                )}
+                <button
+                  onClick={handleResetProgress}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                >
+                  Reset All Progress
+                </button>
+              </div>
+            </div>
 
-        <div className="space-y-4">
-          {papers.map((paper) => (
-            <PaperCard
-              key={paper.id}
-              paper={paper}
-              completedChapters={userData.progress[paper.id] || []}
-              onChapterToggle={(chapterId) => handleChapterToggle(paper.id, chapterId)}
-            />
-          ))}
-        </div>
+            <div className="space-y-4">
+              {papers.map((paper) => (
+                <PaperCard
+                  key={paper.id}
+                  paper={paper}
+                  completedChapters={userData.progress[paper.id] || []}
+                  onChapterToggle={(chapterId) => handleChapterToggle(paper.id, chapterId)}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
         {papers.length === 0 && (
           <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-gray-700 text-lg">No papers found for your selection.</p>
-            <button
-              onClick={() => setShowAddSubject(true)}
-              className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-            >
-              <Plus className="w-5 h-5" />
-              Add Your First Custom Subject
-            </button>
+            {userData.course === 'Other' ? (
+              <>
+                <div className="mb-4">
+                  <svg className="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No subjects found</h3>
+                <p className="text-gray-700 mb-6">Add your own subjects to start tracking your progress!</p>
+                <button
+                  onClick={() => setShowAddSubject(true)}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Your First Subject
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-700 text-lg">No papers found for your selection.</p>
+                <button
+                  onClick={() => setShowAddSubject(true)}
+                  className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Your First Custom Subject
+                </button>
+              </>
+            )}
           </div>
         )}
       </main>
     </div>
+    </>
   );
 };

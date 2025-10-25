@@ -18,7 +18,11 @@ export const LoginForm: React.FC<{ onToggleForm: () => void }> = ({ onToggleForm
     try {
       await signIn(email, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to sign in. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }

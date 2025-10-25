@@ -31,8 +31,11 @@ export const StudyCheckPopup: React.FC<StudyCheckPopupProps> = ({ onYes, onNo, o
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               Did you study today?
             </h3>
+            <p className="text-gray-700 font-medium mb-2">
+              You can choose your streak option only once today.
+            </p>
             <p className="text-gray-700">
-              Be honest with yourself. This will help maintain your study streak.
+              Be honest to yourself.
             </p>
           </div>
 

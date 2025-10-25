@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Calendar } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Calendar } from "lucide-react";
 
 interface CountdownCardProps {
   targetExam: string;
@@ -12,19 +12,41 @@ export const CountdownCard: React.FC<CountdownCardProps> = ({ targetExam }) => {
 
   useEffect(() => {
     const calculateTimeLeft = () => {
-      const examMonth = targetExam.split(' ')[0];
-      const examYear = parseInt(targetExam.split(' ')[1]);
-      
       let targetDate: Date;
-      if (examMonth === 'June') {
-        targetDate = new Date(examYear, 5, 1); // June is month 5 (0-indexed)
+
+      // Check if targetExam is in DD-MM-YYYY format
+      const dateRegex = /^(\d{2})-(\d{2})-(\d{4})$/;
+      const match = targetExam.match(dateRegex);
+
+      if (match) {
+        // Parse DD-MM-YYYY format
+        const [, day, month, year] = match;
+        targetDate = new Date(
+          parseInt(year),
+          parseInt(month) - 1,
+          parseInt(day)
+        );
       } else {
-        targetDate = new Date(examYear, 11, 1); // December is month 11
+        // Parse "Month Year" format (backward compatibility)
+        const examMonth = targetExam.split(" ")[0];
+        const examYear = parseInt(targetExam.split(" ")[1]);
+
+        if (examMonth === "June") {
+          targetDate = new Date(examYear, 5, 1); // June is month 5 (0-indexed)
+        } else {
+          targetDate = new Date(examYear, 11, 1); // December is month 11
+        }
       }
 
       const now = new Date();
       const diff = targetDate.getTime() - now.getTime();
-      
+
+      // Handle negative differences (past dates)
+      if (diff < 0) {
+        setTimeLeft({ months: 0, days: 0 });
+        return;
+      }
+
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const months = Math.floor(days / 30);
       const remainingDays = days % 30;
@@ -44,12 +66,18 @@ export const CountdownCard: React.FC<CountdownCardProps> = ({ targetExam }) => {
         <div className="p-3 bg-blue-100 rounded-lg">
           <Calendar className="w-6 h-6 text-blue-600" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900">Countdown to Exam</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          Countdown to Exam
+        </h3>
       </div>
       <div className="flex items-baseline gap-2">
-        <span className="text-4xl font-bold text-blue-600">{timeLeft.months}</span>
+        <span className="text-4xl font-bold text-blue-600">
+          {timeLeft.months}
+        </span>
         <span className="text-lg text-gray-700">months</span>
-        <span className="text-4xl font-bold text-blue-600">{timeLeft.days}</span>
+        <span className="text-4xl font-bold text-blue-600">
+          {timeLeft.days}
+        </span>
         <span className="text-lg text-gray-700">days</span>
       </div>
       <p className="text-sm text-gray-700 mt-2">Target: {targetExam}</p>

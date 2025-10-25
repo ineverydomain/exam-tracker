@@ -154,7 +154,7 @@ exam-tracker/
 
 ### Progress Calculation
 
-**Overall Progress** = (Completed Items / Total Items) × 100
+**Overall Progress** =0 (Completed Items / Total Items) × 10
 
 Where:
 - Total Items = All chapters from course papers + All modules from custom subjects

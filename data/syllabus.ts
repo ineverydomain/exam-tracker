@@ -281,6 +281,9 @@ export const syllabusData: Record<Course, Record<string, Record<string, Paper[]>
       ],
     },
   },
+  Other: {
+    'Not Applicable': {}, // No predefined papers for custom courses
+  },
 };
 
 export const getPapers = (course: Course, level: string, groups: string[]): Paper[] => {
