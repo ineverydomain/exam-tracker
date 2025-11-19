@@ -286,6 +286,9 @@ export const syllabusData: Record<Course, Record<string, Record<string, Paper[]>
   },
 };
 
+// Export syllabus data for external use
+export const syllabus = syllabusData;
+
 export const getPapers = (course: Course, level: string, groups: string[]): Paper[] => {
   const courseData = syllabusData[course];
   if (!courseData || !courseData[level]) return [];
