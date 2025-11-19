@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Course } from '@/types';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface OnboardingWizardProps {
@@ -25,7 +25,7 @@ const groupOptions = ['Group 1', 'Group 2', 'Both Groups'];
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   userId,
-  userEmail,
+  userEmail: _userEmail,
   onComplete,
 }) => {
   const [step, setStep] = useState(1);
@@ -126,7 +126,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const updateData: any = {
+      const updateData: {
+        displayName: string;
+        course: Course;
+        level: string;
+        groups: string[];
+        onboardingCompleted: boolean;
+        updatedAt: string;
+        targetExam?: string;
+      } = {
         displayName: displayName || 'Student',
         course,
         level: course === 'Other' ? 'Not Applicable' : level,
