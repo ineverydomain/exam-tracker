@@ -32,10 +32,15 @@ export default function Home() {
           setNeedsOnboarding(true);
         } else {
           const userData = userDoc.data();
-          // Check if user has completed onboarding - they need both course and targetExam set
-          const hasValidCourse = userData?.course && userData.course !== "Other" && userData.course !== "";
-          const hasTargetExam = userData?.targetExam && userData.targetExam !== "";
-          const hasCompletedOnboarding = hasValidCourse && hasTargetExam;
+          // Check if user has completed onboarding
+          const hasValidCourse = userData?.course && userData.course !== "";
+          const hasDisplayName = userData?.displayName && userData.displayName !== "";
+          // For "Other" course, we just need course and display name
+          // For specific courses, we also need targetExam
+          const needsTargetExam = userData?.course && userData.course !== "Other";
+          const hasTargetExam = !needsTargetExam || (userData?.targetExam && userData.targetExam !== "");
+          
+          const hasCompletedOnboarding = hasValidCourse && hasDisplayName && hasTargetExam;
           setNeedsOnboarding(!hasCompletedOnboarding);
         }
       } catch (error) {
