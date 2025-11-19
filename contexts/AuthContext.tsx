@@ -13,6 +13,7 @@ import {
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { FirebaseError } from "firebase/app";
+import { Course } from "@/types";
 
 interface AuthContextType {
   user: User | null;
@@ -40,11 +41,11 @@ const ensureUserDocument = async (user: User) => {
     const userDoc = await getDoc(userDocRef);
 
     if (!userDoc.exists()) {
-      // Create a new user document with safe defaults
+      // Create a new user document with safe defaults matching UserData type
       const userData = {
         email: user.email || "",
-        displayName: user.displayName || "Student",
-        course: "Other",
+        displayName: user.displayName || "Student", 
+        course: "Other" as Course,
         level: "Not Applicable",
         targetExam: "",
         groups: [],
@@ -54,6 +55,8 @@ const ensureUserDocument = async (user: User) => {
           current: 0,
           lastCheckedDate: "",
         },
+        streakCount: 0, // Alias for backward compatibility
+        lastCheckInDate: "", // Alias for backward compatibility
         createdAt: new Date().toISOString(),
       };
 
