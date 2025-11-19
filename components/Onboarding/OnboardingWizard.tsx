@@ -25,7 +25,8 @@ const groupOptions = ['Group 1', 'Group 2', 'Both Groups'];
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   userId,
-  userEmail: _userEmail,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  userEmail,
   onComplete,
 }) => {
   const [step, setStep] = useState(1);
