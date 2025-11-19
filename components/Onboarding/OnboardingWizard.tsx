@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Course } from '@/types';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface OnboardingWizardProps {
@@ -126,23 +126,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const userData = {
-        email: userEmail,
+      const updateData: any = {
         displayName: displayName || 'Student',
         course,
-        level,
-        targetExam,
+        level: course === 'Other' ? 'Not Applicable' : level,
         groups: selectedGroups,
-        progress: {},
-        customSubjects: [], // Initialize empty custom subjects array
-        studyStreak: {
-          current: 0,
-          lastCheckedDate: '', // Changed from lastMarkedDate
-        },
-        createdAt: new Date().toISOString(),
+        onboardingCompleted: true,
+        updatedAt: new Date().toISOString(),
       };
+      
+      // Only set targetExam if not "Other" course
+      if (course !== 'Other') {
+        updateData.targetExam = targetExam;
+      }
 
-      await setDoc(doc(db, 'users', userId), userData);
+      await updateDoc(doc(db, 'users', userId), updateData);
       onComplete();
     } catch (error) {
       console.error('Error saving user data:', error);
